@@ -1,0 +1,37 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+        # If the project is React Native, change directory first:
+        # working-directory: ./android
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+        # For Flutter use: flutter build apk --release
+        # For React Native use: cd android && ./gradlew assembleRelease
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release
+          # Adjust the path below if your module is named differently or if using a cross-platform framework
+          path: app/build/outputs/apk/release/*.apk
