@@ -1,3 +1,14 @@
 <resources>
     <string name="app_name">AuxCapture Spike</string>
+    <string name="title_spike">AudioPlaybackCapture Spike</string>
+    <string name="subtext_spike">Play audio → Check if meter moves. Test each app (Local / YouTube / Spotify / YTM). Check if meter moves after screen lock.</string>
+    <string name="peak_default">peak: —</string>
+    <string name="btn_start_capture">Start Capture</string>
+    <string name="btn_stop">Stop</string>
+    <string name="btn_save_wav">Save 10s WAV (active app)</string>
+    <string name="btn_gate2_connect">Gate2 Connect LiveKit</string>
+    <string name="btn_gate2_disconnect">Gate2 Disconnect</string>
+    <string name="btn_gate26_preflight">Gate2.6 ScreenAudioCapturer Preflight</string>
+    <string name="btn_g31_connect">G3.1 Svc Connect</string>
+    <string name="btn_g31_disconnect">G3.1 Svc Disconnect</string>
 </resources>

@@ -132,7 +132,7 @@ class MainActivity : AppCompatActivity() {
             appendLog("G3.1: service LiveKit disconnect requested")
         }
 
-        appendLog("ready. Tap 開始擷取, allow the prompt, then play music.")
+        appendLog("ready. Tap Start Capture, allow the prompt, then play music.")
     }
 
     private fun hasMic() =
