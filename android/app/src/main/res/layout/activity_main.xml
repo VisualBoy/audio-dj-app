@@ -3,29 +3,30 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="16dp">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="AudioPlaybackCapture spike"
-        android:textSize="18sp"
+        android:text="@string/title_spike"
+        android:textSize="20sp"
         android:textStyle="bold"
         android:paddingBottom="4dp" />
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="播歌 → 睇個錶郁唔郁。逐個 app 試(本地/YouTube/Spotify/YTM)。鎖屏後睇仲郁唔郁。"
+        android:text="@string/subtext_spike"
         android:textSize="13sp"
-        android:paddingBottom="16dp" />
+        android:textColor="?android:attr/textColorSecondary"
+        android:paddingBottom="12dp" />
 
     <TextView
         android:id="@+id/levelText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="—"
-        android:textSize="40sp"
+        android:textSize="36sp"
         android:textStyle="bold"
         android:gravity="center" />
 
@@ -36,16 +37,17 @@
         android:layout_height="wrap_content"
         android:max="100"
         android:progress="0"
-        android:paddingBottom="8dp" />
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp" />
 
     <TextView
         android:id="@+id/peakText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="peak: —"
+        android:text="@string/peak_default"
         android:textSize="13sp"
         android:gravity="center"
-        android:paddingBottom="16dp" />
+        android:paddingBottom="12dp" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -57,29 +59,43 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="開始擷取" />
+            android:layout_marginEnd="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingVertical="8dp"
+            android:textSize="13sp"
+            android:text="@string/btn_start_capture" />
 
         <Button
             android:id="@+id/stopBtn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingVertical="8dp"
+            android:textSize="13sp"
             android:enabled="false"
-            android:text="停止" />
+            android:text="@string/btn_stop" />
     </LinearLayout>
 
     <Button
         android:id="@+id/saveBtn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:paddingVertical="8dp"
+        android:textSize="13sp"
         android:enabled="false"
-        android:text="儲存 10 秒 WAV(播緊邊個 app 就儲邊個)" />
+        android:text="@string/btn_save_wav" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:orientation="horizontal">
 
         <Button
@@ -87,27 +103,41 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Gate2 連 LiveKit" />
+            android:layout_marginEnd="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingVertical="8dp"
+            android:textSize="11sp"
+            android:text="@string/btn_gate2_connect" />
 
         <Button
             android:id="@+id/gate2DisconnectBtn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Gate2 斷開" />
+            android:layout_marginStart="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingVertical="8dp"
+            android:textSize="11sp"
+            android:text="@string/btn_gate2_disconnect" />
     </LinearLayout>
 
     <Button
         android:id="@+id/gate26Btn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="Gate2.6 ScreenAudioCapturer preflight" />
+        android:layout_marginTop="6dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:paddingVertical="8dp"
+        android:textSize="11sp"
+        android:text="@string/btn_gate26_preflight" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
         android:orientation="horizontal">
 
         <Button
@@ -115,28 +145,40 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="G3.1 svc-connect" />
+            android:layout_marginEnd="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingVertical="8dp"
+            android:textSize="11sp"
+            android:text="@string/btn_g31_connect" />
 
         <Button
             android:id="@+id/gate31DisconnectBtn"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="G3.1 svc-disc" />
+            android:layout_marginStart="4dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingVertical="8dp"
+            android:textSize="11sp"
+            android:text="@string/btn_g31_disconnect" />
     </LinearLayout>
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="16dp">
+        android:layout_marginTop="12dp"
+        android:background="#1A888888"
+        android:padding="8dp">
 
         <TextView
             android:id="@+id/logText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:text="" />
     </ScrollView>
 </LinearLayout>

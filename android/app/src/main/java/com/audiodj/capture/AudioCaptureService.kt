@@ -220,7 +220,7 @@ class AudioCaptureService : Service() {
     }
 
     private fun requestSave() {
-        if (!running) { log("not capturing — press 開始擷取 first"); return }
+        if (!running) { log("not capturing — press Start Capture first"); return }
         saveBuf = ByteArrayOutputStream()
         saveRemainingFrames = SAMPLE_RATE * 10 // 10 seconds of frames
         log("recording 10s clip…")
