@@ -8,10 +8,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioPlaybackConfiguration
+import android.media.AudioManager
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
@@ -31,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var levelText: TextView
     private lateinit var peakText: TextView
     private lateinit var levelBar: ProgressBar
+    private lateinit var activeSourcesText: TextView
     private lateinit var logText: TextView
     private lateinit var logScrollView: ScrollView
     private lateinit var startBtn: Button
@@ -39,12 +45,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnCopyLog: Button
     private lateinit var btnClearLog: Button
     private lateinit var mpm: MediaProjectionManager
+    private lateinit var audioManager: AudioManager
     private lateinit var gate2: Gate2LiveKit
     private val ts = SimpleDateFormat("HH:mm:ss", Locale.US)
     // dev.token.api comes from local.properties (gitignored) via BuildConfig — no LAN IP in source.
     private val tokenApi = BuildConfig.DEV_TOKEN_API.ifEmpty { "http://127.0.0.1:8790/dev/token" }
 
     private var preflightMode = false
+
+    private val playbackCallback = if (Build.VERSION.SDK_INT >= 26) {
+        object : AudioManager.AudioPlaybackCallback() {
+            override fun onPlaybackConfigChanged(configs: List<AudioPlaybackConfiguration>?) {
+                updateActiveAudioSources(configs)
+            }
+        }
+    } else null
 
     private val projLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
         val pf = preflightMode; preflightMode = false
@@ -87,10 +102,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
         statusText = findViewById(R.id.statusText)
         levelText = findViewById(R.id.levelText)
         peakText = findViewById(R.id.peakText)
         levelBar = findViewById(R.id.levelBar)
+        activeSourcesText = findViewById(R.id.activeSourcesText)
         logText = findViewById(R.id.logText)
         logScrollView = findViewById(R.id.logScrollView)
         startBtn = findViewById(R.id.startBtn)
@@ -99,7 +116,9 @@ class MainActivity : AppCompatActivity() {
         btnCopyLog = findViewById(R.id.btnCopyLog)
         btnClearLog = findViewById(R.id.btnClearLog)
         mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
+        setupCollapsiblePanels()
         requestNeededPermissions()
 
         startBtn.setOnClickListener {
@@ -161,6 +180,77 @@ class MainActivity : AppCompatActivity() {
         appendLog("Ready. Tap START CAPTURE, approve permissions, then play music.")
     }
 
+    private fun setupCollapsiblePanels() {
+        setupPanel(R.id.headerServiceConnections, R.id.contentServiceConnections, R.id.chevronServiceConnections)
+        setupPanel(R.id.headerCaptureSetup, R.id.contentCaptureSetup, R.id.chevronCaptureSetup)
+        setupPanel(R.id.headerStatusLog, R.id.contentStatusLog, R.id.chevronStatusLog)
+    }
+
+    private fun setupPanel(headerId: Int, contentId: Int, chevronId: Int) {
+        val header = findViewById<View>(headerId)
+        val content = findViewById<View>(contentId)
+        val chevron = findViewById<ImageView>(chevronId)
+
+        header.setOnClickListener {
+            if (content.visibility == View.VISIBLE) {
+                content.visibility = View.GONE
+                chevron.rotation = 0f
+            } else {
+                content.visibility = View.VISIBLE
+                chevron.rotation = 180f
+            }
+        }
+    }
+
+    private fun updateActiveAudioSources(configs: List<AudioPlaybackConfiguration>?) {
+        if (Build.VERSION.SDK_INT < 26) return
+        val currentConfigs = configs ?: audioManager.activePlaybackConfigurations
+        val activeApps = mutableSetOf<String>()
+
+        for (config in currentConfigs) {
+            val usage = config.audioAttributes.usage
+            if (usage == AudioAttributes.USAGE_MEDIA ||
+                usage == AudioAttributes.USAGE_GAME ||
+                usage == AudioAttributes.USAGE_UNKNOWN) {
+
+                val pkgName = getPackageNameFromConfig(config)
+                if (!pkgName.isNullOrEmpty() && pkgName != packageName) {
+                    val appLabel = getAppName(pkgName)
+                    activeApps.add(appLabel)
+                }
+            }
+        }
+
+        runOnUiThread {
+            if (activeApps.isEmpty()) {
+                activeSourcesText.text = "None"
+                activeSourcesText.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+            } else {
+                activeSourcesText.text = activeApps.joinToString(", ")
+                activeSourcesText.setTextColor(ContextCompat.getColor(this, R.color.accent_green_stroke))
+            }
+        }
+    }
+
+    private fun getPackageNameFromConfig(config: AudioPlaybackConfiguration): String? {
+        return try {
+            val method = config.javaClass.getMethod("getClientUid")
+            val uid = method.invoke(config) as? Int ?: return null
+            packageManager.getPackagesForUid(uid)?.firstOrNull()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun getAppName(packageName: String): String {
+        return try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (_: Exception) {
+            packageName
+        }
+    }
+
     private fun hasMic() =
         ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
@@ -177,11 +267,19 @@ class MainActivity : AppCompatActivity() {
             addAction(AudioCaptureService.ACTION_LOG)
         }
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+
+        if (Build.VERSION.SDK_INT >= 26 && playbackCallback != null) {
+            audioManager.registerAudioPlaybackCallback(playbackCallback, null)
+            updateActiveAudioSources(audioManager.activePlaybackConfigurations)
+        }
     }
 
     override fun onStop() {
         super.onStop()
         try { unregisterReceiver(receiver) } catch (_: Exception) {}
+        if (Build.VERSION.SDK_INT >= 26 && playbackCallback != null) {
+            audioManager.unregisterAudioPlaybackCallback(playbackCallback)
+        }
     }
 
     private fun appendLog(m: String) {
