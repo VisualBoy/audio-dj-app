@@ -9,6 +9,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    # Scope execution context for all run commands to the android subdirectory
+    defaults:
+      run:
+        working-directory: ./android
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -21,17 +27,13 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-        # If the project is React Native, change directory first:
-        # working-directory: ./android
 
       - name: Build Release APK
         run: ./gradlew assembleRelease
-        # For Flutter use: flutter build apk --release
-        # For React Native use: cd android && ./gradlew assembleRelease
 
+      # Actions run in the workspace root, so the path must include the android prefix
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release
-          # Adjust the path below if your module is named differently or if using a cross-platform framework
-          path: app/build/outputs/apk/release/*.apk
+          path: android/app/build/outputs/apk/release/*.apk
