@@ -10,7 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     
-    # Scope execution context for all run commands to the android subdirectory
     defaults:
       run:
         working-directory: ./android
@@ -28,12 +27,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Release APK
-        run: ./gradlew assembleRelease
+      # Changed to assembleDebug to leverage automatic debug keystore signing
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
 
-      # Actions run in the workspace root, so the path must include the android prefix
+      # Updated artifact path to point to the debug output directory
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release
-          path: android/app/build/outputs/apk/release/*.apk
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/*.apk
