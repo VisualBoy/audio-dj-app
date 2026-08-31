@@ -1,14 +1,24 @@
 <resources>
-    <string name="app_name">AuxCapture Spike</string>
-    <string name="title_spike">AudioPlaybackCapture Spike</string>
-    <string name="subtext_spike">Play audio → Check if meter moves. Test each app (Local / YouTube / Spotify / YTM). Check if meter moves after screen lock.</string>
+    <string name="app_name">AUXCAPTURE PRO</string>
+    <string name="title_spike">AUXCAPTURE PRO</string>
+    <string name="subtext_spike">ACTIVE AUDIO SOURCES:</string>
     <string name="peak_default">peak: —</string>
-    <string name="btn_start_capture">Start Capture</string>
-    <string name="btn_stop">Stop</string>
-    <string name="btn_save_wav">Save 10s WAV (active app)</string>
-    <string name="btn_gate2_connect">Gate2 Connect LiveKit</string>
-    <string name="btn_gate2_disconnect">Gate2 Disconnect</string>
-    <string name="btn_gate26_preflight">Gate2.6 ScreenAudioCapturer Preflight</string>
-    <string name="btn_g31_connect">G3.1 Svc Connect</string>
-    <string name="btn_g31_disconnect">G3.1 Svc Disconnect</string>
+    <string name="status_ready">READY TO CAPTURE</string>
+    <string name="btn_start_capture">START CAPTURE</string>
+    <string name="btn_stop">STOP CAPTURE</string>
+    <string name="btn_save_wav">SAVE 10-SEC WAV CLIP</string>
+
+    <string name="label_service_connections">SERVICE CONNECTIONS</string>
+    <string name="label_livekit_gate2">LIVEKIT (GATE2)</string>
+    <string name="label_service_g31">SERVICE G3.1</string>
+    <string name="btn_connect">CONNECT</string>
+    <string name="btn_disconnect">DISCONNECT</string>
+
+    <string name="label_capture_setup">CAPTURE SETUP</string>
+    <string name="btn_gate26_preflight">Preflight Screen Audio Capture (GATE 2.6 Preflight)</string>
+
+    <string name="label_status_log">STATUS LOG</string>
+    <string name="btn_copy">Copy</string>
+    <string name="btn_clear_log">Clear log</string>
+    <string name="subtext_saves_hint">Saves from current active app.</string>
 </resources>
