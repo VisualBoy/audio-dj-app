@@ -2,6 +2,8 @@ package com.audiodj.capture
 
 import android.app.Activity
 import android.content.BroadcastReceiver
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -11,7 +13,9 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Button
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -23,13 +27,17 @@ import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var statusText: TextView
     private lateinit var levelText: TextView
     private lateinit var peakText: TextView
     private lateinit var levelBar: ProgressBar
     private lateinit var logText: TextView
+    private lateinit var logScrollView: ScrollView
     private lateinit var startBtn: Button
     private lateinit var stopBtn: Button
     private lateinit var saveBtn: Button
+    private lateinit var btnCopyLog: Button
+    private lateinit var btnClearLog: Button
     private lateinit var mpm: MediaProjectionManager
     private lateinit var gate2: Gate2LiveKit
     private val ts = SimpleDateFormat("HH:mm:ss", Locale.US)
@@ -51,6 +59,8 @@ class MainActivity : AppCompatActivity() {
                 startBtn.isEnabled = false
                 stopBtn.isEnabled = true
                 saveBtn.isEnabled = true
+                statusText.text = "CAPTURING AUDIO"
+                statusText.setTextColor(ContextCompat.getColor(this, R.color.accent_green_stroke))
             }
             appendLog(if (pf) "Gate2.6 preflight requested — allow the prompt" else "capture requested — allow the system prompt")
         } else {
@@ -77,13 +87,17 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        statusText = findViewById(R.id.statusText)
         levelText = findViewById(R.id.levelText)
         peakText = findViewById(R.id.peakText)
         levelBar = findViewById(R.id.levelBar)
         logText = findViewById(R.id.logText)
+        logScrollView = findViewById(R.id.logScrollView)
         startBtn = findViewById(R.id.startBtn)
         stopBtn = findViewById(R.id.stopBtn)
         saveBtn = findViewById(R.id.saveBtn)
+        btnCopyLog = findViewById(R.id.btnCopyLog)
+        btnClearLog = findViewById(R.id.btnClearLog)
         mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
 
         requestNeededPermissions()
@@ -101,6 +115,8 @@ class MainActivity : AppCompatActivity() {
             startBtn.isEnabled = true
             stopBtn.isEnabled = false
             saveBtn.isEnabled = false
+            statusText.text = getString(R.string.status_ready)
+            statusText.setTextColor(ContextCompat.getColor(this, R.color.text_green))
             levelText.text = "—"
             peakText.text = "peak: —"
             levelBar.progress = 0
@@ -109,6 +125,16 @@ class MainActivity : AppCompatActivity() {
         saveBtn.setOnClickListener {
             startService(Intent(this, AudioCaptureService::class.java).setAction(AudioCaptureService.ACTION_SAVE))
         }
+        btnCopyLog.setOnClickListener {
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = ClipData.newPlainText("AuxCapture Logs", logText.text)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "Logs copied to clipboard", Toast.LENGTH_SHORT).show()
+        }
+        btnClearLog.setOnClickListener {
+            logText.text = ""
+        }
+
         // Gate 2 — LiveKit connect-only (no capture, no publish)
         gate2 = Gate2LiveKit(this) { m -> android.util.Log.i("Gate2", m); appendLog(m) }
         findViewById<Button>(R.id.gate2ConnectBtn).setOnClickListener {
@@ -132,7 +158,7 @@ class MainActivity : AppCompatActivity() {
             appendLog("G3.1: service LiveKit disconnect requested")
         }
 
-        appendLog("ready. Tap Start Capture, allow the prompt, then play music.")
+        appendLog("Ready. Tap START CAPTURE, approve permissions, then play music.")
     }
 
     private fun hasMic() =
@@ -159,6 +185,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun appendLog(m: String) {
-        runOnUiThread { logText.append("${ts.format(Date())}  $m\n") }
+        runOnUiThread {
+            logText.append("${ts.format(Date())} - $m\n")
+            logScrollView.post { logScrollView.fullScroll(ScrollView.FOCUS_DOWN) }
+        }
     }
 }
