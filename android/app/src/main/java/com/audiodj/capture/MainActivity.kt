@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var levelText: TextView
     private lateinit var peakText: TextView
     private lateinit var levelBar: ProgressBar
+    private lateinit var audioMeterView: AudioMeterView
     private lateinit var activeSourcesText: TextView
     private lateinit var logText: TextView
     private lateinit var logScrollView: ScrollView
@@ -71,11 +72,7 @@ class MainActivity : AppCompatActivity() {
             }
             ContextCompat.startForegroundService(this, i)
             if (!pf) {
-                startBtn.isEnabled = false
-                stopBtn.isEnabled = true
-                saveBtn.isEnabled = true
-                statusText.text = "CAPTURING AUDIO"
-                statusText.setTextColor(ContextCompat.getColor(this, R.color.accent_green_stroke))
+                setCapturingState(true)
             }
             appendLog(if (pf) "Gate2.6 preflight requested — allow the prompt" else "capture requested — allow the system prompt")
         } else {
@@ -89,10 +86,15 @@ class MainActivity : AppCompatActivity() {
                 AudioCaptureService.ACTION_LEVEL -> {
                     val db = i.getFloatExtra("db", -120f)
                     val pk = i.getFloatExtra("peak", -120f)
+                    val capturing = i.getBooleanExtra("capturing", false)
+                    val fft = i.getFloatArrayExtra("fft")
                     levelText.text = String.format(Locale.US, "%.0f dBFS", db)
                     peakText.text = String.format(Locale.US, "peak %.0f dBFS", pk)
                     val pct = (((db + 80f) / 80f) * 100f).coerceIn(0f, 100f)
                     levelBar.progress = pct.toInt()
+
+                    setCapturingState(capturing)
+                    audioMeterView.updateData(db, pk, fft, capturing)
                 }
                 AudioCaptureService.ACTION_LOG -> appendLog(i.getStringExtra("msg") ?: "")
             }
@@ -107,6 +109,7 @@ class MainActivity : AppCompatActivity() {
         levelText = findViewById(R.id.levelText)
         peakText = findViewById(R.id.peakText)
         levelBar = findViewById(R.id.levelBar)
+        audioMeterView = findViewById(R.id.spectrumBar)
         activeSourcesText = findViewById(R.id.activeSourcesText)
         logText = findViewById(R.id.logText)
         logScrollView = findViewById(R.id.logScrollView)
@@ -131,14 +134,11 @@ class MainActivity : AppCompatActivity() {
         }
         stopBtn.setOnClickListener {
             startService(Intent(this, AudioCaptureService::class.java).setAction(AudioCaptureService.ACTION_STOP))
-            startBtn.isEnabled = true
-            stopBtn.isEnabled = false
-            saveBtn.isEnabled = false
-            statusText.text = getString(R.string.status_ready)
-            statusText.setTextColor(ContextCompat.getColor(this, R.color.text_green))
+            setCapturingState(false)
             levelText.text = "—"
             peakText.text = "peak: —"
             levelBar.progress = 0
+            audioMeterView.updateData(-120f, -120f, null, false)
             appendLog("stopped")
         }
         saveBtn.setOnClickListener {
@@ -279,6 +279,19 @@ class MainActivity : AppCompatActivity() {
         try { unregisterReceiver(receiver) } catch (_: Exception) {}
         if (Build.VERSION.SDK_INT >= 26 && playbackCallback != null) {
             audioManager.unregisterAudioPlaybackCallback(playbackCallback)
+        }
+    }
+
+    private fun setCapturingState(capturing: Boolean) {
+        startBtn.isEnabled = !capturing
+        stopBtn.isEnabled = capturing
+        saveBtn.isEnabled = capturing
+        if (capturing) {
+            statusText.text = "CAPTURING AUDIO"
+            statusText.setTextColor(ContextCompat.getColor(this, R.color.accent_green_stroke))
+        } else {
+            statusText.text = getString(R.string.status_ready)
+            statusText.setTextColor(ContextCompat.getColor(this, R.color.text_green))
         }
     }
 

@@ -180,8 +180,12 @@ class AudioCaptureService : Service() {
 
     private fun loop() {
         val buf = ShortArray(4096)
+        val monoSamples = ShortArray(FftCalculator.FFT_SIZE)
+        val fftBands = FloatArray(FftCalculator.BANDS)
+        var monoIndex = 0
         var lastUi = 0L
         var lastLog = 0L
+
         while (running) {
             val n = record?.read(buf, 0, buf.size) ?: -999
             if (n < 0) { android.util.Log.e("AuxCapture", "AudioRecord.read error=$n — stopping capture loop"); log("AudioRecord.read error=$n"); break }
@@ -194,11 +198,25 @@ class AudioCaptureService : Service() {
                 val a = if (s < 0) -s else s
                 if (a > peak) peak = a
             }
+
+            // Downmix stereo to mono for FFT calculation
+            var i = 0
+            while (i < n - 1) {
+                val monoVal = ((buf[i].toInt() + buf[i + 1].toInt()) / 2).toShort()
+                monoSamples[monoIndex] = monoVal
+                monoIndex = (monoIndex + 1) % FftCalculator.FFT_SIZE
+                i += CHANNELS
+            }
+
             val rms = sqrt(sumsq / n)
             val db = if (rms > 0) 20.0 * log10(rms / 32768.0) else -120.0
             val pdb = if (peak > 0) 20.0 * log10(peak / 32768.0) else -120.0
             val now = SystemClock.elapsedRealtime()
-            if (now - lastUi >= 100) { broadcastLevel(db.toFloat(), pdb.toFloat()); lastUi = now }
+            if (now - lastUi >= 50) {
+                FftCalculator.computeSpectrum(monoSamples, fftBands)
+                broadcastLevel(db.toFloat(), pdb.toFloat(), fftBands, true)
+                lastUi = now
+            }
             if (now - lastLog >= 1000) {
                 android.util.Log.i("AuxCapture", String.format(Locale.US, "level=%.1f dBFS peak=%.1f (%s)", db, pdb, if (db > -70) "AUDIO" else "silent"))
                 lastLog = now
@@ -266,6 +284,7 @@ class AudioCaptureService : Service() {
         try { projection?.stop() } catch (_: Exception) {}
         projection = null
         if (mode == Mode.LOCAL_PROOF) mode = Mode.IDLE
+        broadcastLevel(-120f, -120f, null, false)
     }
 
     override fun onDestroy() {
@@ -330,8 +349,17 @@ class AudioCaptureService : Service() {
             startForeground(NOTIF_ID, notif)
     }
 
-    private fun broadcastLevel(db: Float, peak: Float) {
-        sendBroadcast(Intent(ACTION_LEVEL).setPackage(packageName).putExtra("db", db).putExtra("peak", peak))
+    private fun broadcastLevel(db: Float, peak: Float, fft: FloatArray? = null, capturing: Boolean = true) {
+        val intent = Intent(ACTION_LEVEL).apply {
+            setPackage(packageName)
+            putExtra("db", db)
+            putExtra("peak", peak)
+            putExtra("capturing", capturing)
+            if (fft != null) {
+                putExtra("fft", fft)
+            }
+        }
+        sendBroadcast(intent)
     }
 
     private fun log(msg: String) {
