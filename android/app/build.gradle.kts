@@ -41,8 +41,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
-    // Gate 2+: LiveKit RTC (signaling now; ScreenAudioCapturer publish at Gate 3)
-    implementation("io.livekit:livekit-android:2.27.0")
+    // Native WebRTC bindings
+    implementation("io.getstream:stream-webrtc-android:1.2.3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 }

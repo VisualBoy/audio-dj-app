@@ -243,7 +243,7 @@
             android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Card 2: Service Connections (Collapsible, closed by default) -->
+    <!-- Card 2: Go Backend Settings (Visible by default in top panel) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -252,213 +252,127 @@
         android:orientation="vertical"
         android:padding="10dp">
 
-        <RelativeLayout
-            android:id="@+id/headerServiceConnections"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:drawablePadding="6dp"
+            android:text="@string/label_go_settings"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:drawableLeftCompat="@drawable/ic_gear"
+            app:drawableTint="@color/text_primary" />
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:clickable="true"
-            android:focusable="true">
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:drawablePadding="6dp"
-                android:text="@string/label_service_connections"
+                android:layout_marginEnd="8dp"
+                android:text="@string/label_backend_url"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
+
+            <EditText
+                android:id="@+id/backendUrlInput"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_weight="1"
+                android:background="#20232a"
+                android:hint="@string/hint_backend_url"
+                android:inputType="textUri"
+                android:paddingHorizontal="8dp"
                 android:textColor="@color/text_primary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                app:drawableLeftCompat="@drawable/ic_mic"
-                app:drawableTint="@color/text_primary" />
-
-            <ImageView
-                android:id="@+id/chevronServiceConnections"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:contentDescription="Expand/Collapse"
-                android:src="@drawable/ic_chevron_down"
-                app:tint="@color/text_secondary" />
-        </RelativeLayout>
-
-        <LinearLayout
-            android:id="@+id/contentServiceConnections"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="vertical"
-            android:visibility="gone">
-
-            <!-- LiveKit (Gate2) Row -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:drawablePadding="6dp"
-                android:paddingVertical="2dp"
-                android:text="@string/label_livekit_gate2"
-                android:textColor="@color/text_primary"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                app:drawableLeftCompat="@drawable/ic_cloud"
-                app:drawableTint="@color/text_primary" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingBottom="6dp"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/gate2ConnectBtn"
-                    android:layout_width="0dp"
-                    android:layout_height="36dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/accent_blue"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:padding="0dp"
-                    android:text="@string/btn_connect"
-                    android:textColor="@color/text_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/gate2DisconnectBtn"
-                    android:layout_width="0dp"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/accent_red"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:padding="0dp"
-                    android:text="@string/btn_disconnect"
-                    android:textColor="@color/text_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    app:icon="@drawable/ic_disconnect"
-                    app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconTint="@color/text_primary" />
-            </LinearLayout>
-
-            <!-- Service G3.1 Row -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:drawablePadding="6dp"
-                android:paddingVertical="2dp"
-                android:text="@string/label_service_g31"
-                android:textColor="@color/text_primary"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                app:drawableLeftCompat="@drawable/ic_gear"
-                app:drawableTint="@color/text_primary" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/gate31ConnectBtn"
-                    android:layout_width="0dp"
-                    android:layout_height="36dp"
-                    android:layout_marginEnd="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/accent_blue"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:padding="0dp"
-                    android:text="@string/btn_connect"
-                    android:textColor="@color/text_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/gate31DisconnectBtn"
-                    android:layout_width="0dp"
-                    android:layout_height="36dp"
-                    android:layout_marginStart="4dp"
-                    android:layout_weight="1"
-                    android:backgroundTint="@color/accent_red"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:padding="0dp"
-                    android:text="@string/btn_disconnect"
-                    android:textColor="@color/text_primary"
-                    android:textSize="11sp"
-                    android:textStyle="bold"
-                    app:icon="@drawable/ic_disconnect"
-                    app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconTint="@color/text_primary" />
-            </LinearLayout>
+                android:textColorHint="@color/text_secondary"
+                android:textSize="11sp" />
         </LinearLayout>
-    </LinearLayout>
 
-    <!-- Card 3: Capture Setup (Collapsible, closed by default) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/bg_card"
-        android:orientation="vertical"
-        android:padding="10dp">
-
-        <RelativeLayout
-            android:id="@+id/headerCaptureSetup"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:clickable="true"
-            android:focusable="true">
+            android:layout_marginTop="6dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_alignParentStart="true"
-                android:layout_centerVertical="true"
-                android:drawablePadding="6dp"
-                android:text="@string/label_capture_setup"
-                android:textColor="@color/text_primary"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                app:drawableLeftCompat="@drawable/ic_gear"
-                app:drawableTint="@color/text_primary" />
+                android:layout_marginEnd="8dp"
+                android:text="@string/label_deck_id"
+                android:textColor="@color/text_secondary"
+                android:textSize="11sp" />
 
-            <ImageView
-                android:id="@+id/chevronCaptureSetup"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:contentDescription="Expand/Collapse"
-                android:src="@drawable/ic_chevron_down"
-                app:tint="@color/text_secondary" />
-        </RelativeLayout>
+            <RadioGroup
+                android:id="@+id/deckRadioGroup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <RadioButton
+                    android:id="@+id/radioDeckA"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="@string/deck_a"
+                    android:textColor="@color/text_primary"
+                    android:textSize="11sp" />
+
+                <RadioButton
+                    android:id="@+id/radioDeckB"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:text="@string/deck_b"
+                    android:textColor="@color/text_primary"
+                    android:textSize="11sp" />
+            </RadioGroup>
+        </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/contentCaptureSetup"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:orientation="vertical"
-            android:visibility="gone">
+            android:orientation="horizontal">
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/gate26Btn"
-                android:layout_width="match_parent"
-                android:layout_height="38dp"
-                android:backgroundTint="#262a33"
+                android:id="@+id/webrtcConnectBtn"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_marginEnd="4dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/accent_blue"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:padding="0dp"
-                android:text="@string/btn_gate26_preflight"
+                android:text="@string/btn_connect"
                 android:textColor="@color/text_primary"
-                android:textSize="11sp" />
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/webrtcDisconnectBtn"
+                android:layout_width="0dp"
+                android:layout_height="36dp"
+                android:layout_marginStart="4dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/accent_red"
+                android:enabled="false"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                android:text="@string/btn_disconnect"
+                android:textColor="@color/text_primary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                app:icon="@drawable/ic_disconnect"
+                app:iconGravity="textStart"
+                app:iconPadding="4dp"
+                app:iconTint="@color/text_primary" />
         </LinearLayout>
     </LinearLayout>
 

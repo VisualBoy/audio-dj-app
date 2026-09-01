@@ -45,14 +45,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var saveBtn: Button
     private lateinit var btnCopyLog: Button
     private lateinit var btnClearLog: Button
+    private lateinit var backendUrlInput: android.widget.EditText
+    private lateinit var radioDeckA: android.widget.RadioButton
+    private lateinit var radioDeckB: android.widget.RadioButton
+    private lateinit var webrtcConnectBtn: Button
+    private lateinit var webrtcDisconnectBtn: Button
     private lateinit var mpm: MediaProjectionManager
     private lateinit var audioManager: AudioManager
-    private lateinit var gate2: Gate2LiveKit
     private val ts = SimpleDateFormat("HH:mm:ss", Locale.US)
-    // dev.token.api comes from local.properties (gitignored) via BuildConfig — no LAN IP in source.
-    private val tokenApi = BuildConfig.DEV_TOKEN_API.ifEmpty { "http://127.0.0.1:8790/dev/token" }
 
     private var preflightMode = false
+    private var pendingWebrtcConnect = false
 
     private val playbackCallback = if (Build.VERSION.SDK_INT >= 26) {
         object : AudioManager.AudioPlaybackCallback() {
@@ -64,17 +67,26 @@ class MainActivity : AppCompatActivity() {
 
     private val projLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
         val pf = preflightMode; preflightMode = false
+        val isWebrtc = pendingWebrtcConnect; pendingWebrtcConnect = false
         if (res.resultCode == Activity.RESULT_OK && res.data != null) {
+            val url = backendUrlInput.text.toString().trim()
+            val deckId = if (radioDeckB.isChecked) "deck-b" else "deck-a"
             val i = Intent(this, AudioCaptureService::class.java).apply {
-                action = if (pf) AudioCaptureService.ACTION_PREFLIGHT else AudioCaptureService.ACTION_START
+                action = if (isWebrtc) AudioCaptureService.ACTION_WEBRTC_CONNECT else (if (pf) AudioCaptureService.ACTION_PREFLIGHT else AudioCaptureService.ACTION_START)
                 putExtra(AudioCaptureService.EXTRA_RESULT_CODE, res.resultCode)
                 putExtra(AudioCaptureService.EXTRA_DATA, res.data)
+                putExtra(AudioCaptureService.EXTRA_BACKEND_URL, url)
+                putExtra(AudioCaptureService.EXTRA_DECK_ID, deckId)
             }
             ContextCompat.startForegroundService(this, i)
-            if (!pf) {
+            if (isWebrtc) {
+                webrtcConnectBtn.isEnabled = false
+                webrtcDisconnectBtn.isEnabled = true
+                appendLog("WebRTC connect requested with MediaProjection for $deckId -> $url")
+            } else if (!pf) {
                 setCapturingState(true)
+                appendLog("capture requested — allow the system prompt")
             }
-            appendLog(if (pf) "Gate2.6 preflight requested — allow the prompt" else "capture requested — allow the system prompt")
         } else {
             appendLog("projection permission cancelled")
         }
@@ -118,8 +130,23 @@ class MainActivity : AppCompatActivity() {
         saveBtn = findViewById(R.id.saveBtn)
         btnCopyLog = findViewById(R.id.btnCopyLog)
         btnClearLog = findViewById(R.id.btnClearLog)
+        backendUrlInput = findViewById(R.id.backendUrlInput)
+        radioDeckA = findViewById(R.id.radioDeckA)
+        radioDeckB = findViewById(R.id.radioDeckB)
+        webrtcConnectBtn = findViewById(R.id.webrtcConnectBtn)
+        webrtcDisconnectBtn = findViewById(R.id.webrtcDisconnectBtn)
         mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+        val prefs = getSharedPreferences("auxcapture_prefs", Context.MODE_PRIVATE)
+        val savedBackendUrl = prefs.getString("backend_url", "http://192.168.1.100:8080")
+        val savedDeckId = prefs.getString("deck_id", "deck-a")
+        backendUrlInput.setText(savedBackendUrl)
+        if (savedDeckId == "deck-b") {
+            radioDeckB.isChecked = true
+        } else {
+            radioDeckA.isChecked = true
+        }
 
         setupCollapsiblePanels()
         requestNeededPermissions()
@@ -154,35 +181,37 @@ class MainActivity : AppCompatActivity() {
             logText.text = ""
         }
 
-        // Gate 2 — LiveKit connect-only (no capture, no publish)
-        gate2 = Gate2LiveKit(this) { m -> android.util.Log.i("Gate2", m); appendLog(m) }
-        findViewById<Button>(R.id.gate2ConnectBtn).setOnClickListener {
-            gate2.connect(lifecycleScope, tokenApi)
-        }
-        findViewById<Button>(R.id.gate2DisconnectBtn).setOnClickListener {
-            gate2.disconnect()
-        }
-        findViewById<Button>(R.id.gate26Btn).setOnClickListener {
-            if (!hasMic()) { requestNeededPermissions(); return@setOnClickListener }
-            preflightMode = true
+        webrtcConnectBtn.setOnClickListener {
+            if (!hasMic()) {
+                appendLog("need RECORD_AUDIO — granting…")
+                requestNeededPermissions()
+                return@setOnClickListener
+            }
+            val url = backendUrlInput.text.toString().trim()
+            val deckId = if (radioDeckB.isChecked) "deck-b" else "deck-a"
+            getSharedPreferences("auxcapture_prefs", Context.MODE_PRIVATE).edit()
+                .putString("backend_url", url)
+                .putString("deck_id", deckId)
+                .apply()
+
+            pendingWebrtcConnect = true
             projLauncher.launch(mpm.createScreenCaptureIntent())
         }
-        // Gate 3.1 — service-owned LiveKit session (survives Activity backgrounding), 0 tracks
-        findViewById<Button>(R.id.gate31ConnectBtn).setOnClickListener {
-            ContextCompat.startForegroundService(this, Intent(this, AudioCaptureService::class.java).setAction(AudioCaptureService.ACTION_LK_CONNECT))
-            appendLog("G3.1: service LiveKit connect requested")
-        }
-        findViewById<Button>(R.id.gate31DisconnectBtn).setOnClickListener {
-            startService(Intent(this, AudioCaptureService::class.java).setAction(AudioCaptureService.ACTION_LK_DISCONNECT))
-            appendLog("G3.1: service LiveKit disconnect requested")
+
+        webrtcDisconnectBtn.setOnClickListener {
+            val intent = Intent(this, AudioCaptureService::class.java).apply {
+                action = AudioCaptureService.ACTION_WEBRTC_DISCONNECT
+            }
+            startService(intent)
+            webrtcConnectBtn.isEnabled = true
+            webrtcDisconnectBtn.isEnabled = false
+            appendLog("WebRTC disconnect requested")
         }
 
         appendLog("Ready. Tap START CAPTURE, approve permissions, then play music.")
     }
 
     private fun setupCollapsiblePanels() {
-        setupPanel(R.id.headerServiceConnections, R.id.contentServiceConnections, R.id.chevronServiceConnections)
-        setupPanel(R.id.headerCaptureSetup, R.id.contentCaptureSetup, R.id.chevronCaptureSetup)
         setupPanel(R.id.headerStatusLog, R.id.contentStatusLog, R.id.chevronStatusLog)
     }
 

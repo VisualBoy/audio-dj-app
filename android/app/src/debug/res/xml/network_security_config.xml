@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- DEBUG ONLY. Allows cleartext ws:// + http:// to the LAN LiveKit / token dev servers.
+<!-- DEBUG ONLY. Allows cleartext ws:// + http:// to the LAN Go backend signaling servers.
      Release builds do NOT include this (no src/release override) and stay TLS-only. -->
 <network-security-config>
     <domain-config cleartextTrafficPermitted="true">
