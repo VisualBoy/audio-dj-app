@@ -44,13 +44,15 @@ class AudioCaptureService : Service() {
         const val ACTION_START = "com.audiodj.capture.START"
         const val ACTION_STOP = "com.audiodj.capture.STOP"
         const val ACTION_SAVE = "com.audiodj.capture.SAVE"
-        const val ACTION_PREFLIGHT = "com.audiodj.capture.PREFLIGHT" // Gate 2.6
-        const val ACTION_LK_CONNECT = "com.audiodj.capture.LK_CONNECT"     // Gate 3.1 (service-owned LiveKit)
-        const val ACTION_LK_DISCONNECT = "com.audiodj.capture.LK_DISCONNECT"
+        const val ACTION_PREFLIGHT = "com.audiodj.capture.PREFLIGHT"
+        const val ACTION_WEBRTC_CONNECT = "com.audiodj.capture.WEBRTC_CONNECT"
+        const val ACTION_WEBRTC_DISCONNECT = "com.audiodj.capture.WEBRTC_DISCONNECT"
         const val ACTION_LEVEL = "com.audiodj.capture.LEVEL"
         const val ACTION_LOG = "com.audiodj.capture.LOG"
         const val EXTRA_RESULT_CODE = "rc"
         const val EXTRA_DATA = "data"
+        const val EXTRA_BACKEND_URL = "backend_url"
+        const val EXTRA_DECK_ID = "deck_id"
         const val SAMPLE_RATE = 48000
         const val CHANNELS = 2
         private const val CHANNEL_ID = "capture"
@@ -72,12 +74,10 @@ class AudioCaptureService : Service() {
     }
     private var receiverRegistered = false
 
-    // Gate 3.1: service-owned LiveKit session. LOCAL_PROOF (capture meter/WAV) and
-    // LIVEKIT_PUBLISH must be mutually exclusive — never two AudioPlaybackCapture AudioRecords.
-    private enum class Mode { IDLE, LOCAL_PROOF, LIVEKIT_PUBLISH }
+    private enum class Mode { IDLE, LOCAL_PROOF, WEBRTC_PUBLISH }
     @Volatile private var mode = Mode.IDLE
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-    private var lkSession: Gate2LiveKit? = null
+    private var webrtcPublisher: WebRtcPublisher? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -85,14 +85,32 @@ class AudioCaptureService : Service() {
         when (intent?.action) {
             ACTION_STOP -> { stopEverything(); stopSelf(); return START_NOT_STICKY }
             ACTION_SAVE -> { requestSave(); return START_NOT_STICKY }
-            ACTION_LK_CONNECT -> { lkConnect(); return START_NOT_STICKY }
-            ACTION_LK_DISCONNECT -> { lkDisconnect(); stopSelf(); return START_NOT_STICKY }
+            ACTION_WEBRTC_CONNECT -> {
+                val rc = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
+                val data: Intent? = if (Build.VERSION.SDK_INT >= 33)
+                    intent.getParcelableExtra(EXTRA_DATA, Intent::class.java)
+                else @Suppress("DEPRECATION") intent.getParcelableExtra(EXTRA_DATA)
+                if (rc == Activity.RESULT_OK && data != null && projection == null) {
+                    val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+                    projection = mpm.getMediaProjection(rc, data)
+                    projection?.registerCallback(object : MediaProjection.Callback() {
+                        override fun onStop() { log("MediaProjection onStop() — capture ended by system/user"); stopEverything(); stopSelf() }
+                    }, Handler(Looper.getMainLooper()))
+                }
+                if (projection != null && !running) {
+                    startCapture()
+                }
+                val backendUrl = intent.getStringExtra(EXTRA_BACKEND_URL) ?: "http://10.0.2.2:8080"
+                val deckId = intent.getStringExtra(EXTRA_DECK_ID) ?: "deck-a"
+                webrtcConnect(backendUrl, deckId)
+                return START_NOT_STICKY
+            }
+            ACTION_WEBRTC_DISCONNECT -> { webrtcDisconnect(); stopSelf(); return START_NOT_STICKY }
         }
         // A MediaProjection consent token cannot be recreated after process death, so never
         // sticky-restart (that would deliver a null intent with no token).
         if (intent == null) { log("null start intent (no projection token) — stopping"); stopSelf(); return START_NOT_STICKY }
         if (running) { log("already capturing — ignoring duplicate START"); return START_NOT_STICKY }
-        if (mode == Mode.LIVEKIT_PUBLISH) { log("LiveKit session active — disconnect it before LOCAL_PROOF capture"); stopSelf(); return START_NOT_STICKY }
         stopping = false
         startForegroundCompat()
         try {
@@ -114,26 +132,9 @@ class AudioCaptureService : Service() {
         return START_NOT_STICKY
     }
 
-    /** Gate 2.6: does LiveKit 2.27.0 ScreenAudioCapturer.initAudioRecord succeed on THIS device?
-     *  (bytecode shows allocateDirect + a hasArray()==false rejection path — verify empirically). */
     private fun runPreflight() {
         try {
-            val direct = java.nio.ByteBuffer.allocateDirect(1920)
-            // On Android/ART direct buffers DO have a backing array (hasArray()==true), unlike a desktop JVM.
-            log("directBuffer.hasArray=${direct.hasArray()} isDirect=${direct.isDirect}")
-            val cap = io.livekit.android.audio.ScreenAudioCapturer(projection!!).apply { gain = 1.0f }
-            val ok = cap.initAudioRecord(android.media.AudioFormat.ENCODING_PCM_16BIT, 2, 48_000)
-            val ar = cap.javaClass.getDeclaredField("audioRecord").let {
-                it.isAccessible = true; it.get(cap) as? android.media.AudioRecord
-            }
-            val state = ar?.state          // 1 = STATE_INITIALIZED
-            val recState = ar?.recordingState  // 3 = RECORDSTATE_RECORDING
-            android.util.Log.i("Gate26", "screenAudioInit=$ok state=$state recordingState=$recState")
-            log("Gate2.6 screenAudioInit=$ok state=$state recordingState=$recState")
-            cap.releaseAudioResources()
-        } catch (e: Exception) {
-            android.util.Log.e("Gate26", "preflight EXCEPTION", e)
-            log("Gate2.6 preflight EXCEPTION: ${e.javaClass.simpleName}: ${e.message}")
+            log("Preflight check")
         } finally {
             stopEverything(); stopSelf()
         }
@@ -289,45 +290,42 @@ class AudioCaptureService : Service() {
 
     override fun onDestroy() {
         stopEverything()
-        try { lkSession?.disconnect() } catch (_: Exception) {}
-        lkSession = null
+        try { webrtcPublisher?.disconnect() } catch (_: Exception) {}
+        webrtcPublisher = null
         try { serviceScope.cancel() } catch (_: Exception) {}
         super.onDestroy()
     }
 
-    // Gate 3.1 — service owns the LiveKit Room (survives Activity backgrounding); publishes 0 tracks.
-    private fun lkConnect() {
-        if (running || mode == Mode.LOCAL_PROOF) { log("capture (LOCAL_PROOF) active — stop it before LiveKit connect"); stopSelf(); return }
-        if (mode == Mode.LIVEKIT_PUBLISH) { log("LiveKit already connected"); return }
-        mode = Mode.LIVEKIT_PUBLISH
-        startForegroundMic()
-        val api = BuildConfig.DEV_TOKEN_API.ifEmpty { "http://127.0.0.1:8790/dev/token" }
-        lkSession = Gate2LiveKit(this) { m -> log(m) }
-        lkSession!!.connect(serviceScope, api)
-        log("service-owned LiveKit connect (Gate 3.1, publishing 0 tracks)")
+    private fun webrtcConnect(backendUrl: String, deckId: String) {
+        if (mode == Mode.WEBRTC_PUBLISH) { log("WebRTC publisher already active"); return }
+        mode = Mode.WEBRTC_PUBLISH
+        startForegroundWebRtc()
+        webrtcPublisher = WebRtcPublisher(this) { m -> log(m) }
+        webrtcPublisher!!.connect(serviceScope, backendUrl, deckId, projection)
+        log("WebRTC publisher connecting to $backendUrl for deck $deckId (hasProjection=${projection != null})")
     }
 
-    private fun lkDisconnect() {
-        lkSession?.disconnect()
-        lkSession = null
+    private fun webrtcDisconnect() {
+        webrtcPublisher?.disconnect()
+        webrtcPublisher = null
         mode = Mode.IDLE
         try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) {}
-        log("service-owned LiveKit disconnected")
+        log("WebRTC publisher disconnected")
     }
 
-    private fun startForegroundMic() {
+    private fun startForegroundWebRtc() {
         val nm = getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= 26) {
             nm.createNotificationChannel(NotificationChannel(CHANNEL_ID, "Capture", NotificationManager.IMPORTANCE_LOW))
         }
         val notif: Notification = Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("auxcrew — LiveKit session")
-            .setContentText("Connected (0 tracks)")
+            .setContentTitle("AuxCapture — WebRTC Session")
+            .setContentText("Streaming to Go Backend")
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setOngoing(true)
             .build()
         if (Build.VERSION.SDK_INT >= 29)
-            startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+            startForeground(NOTIF_ID, notif, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
         else
             startForeground(NOTIF_ID, notif)
     }

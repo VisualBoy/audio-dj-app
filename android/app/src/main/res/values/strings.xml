@@ -8,14 +8,15 @@
     <string name="btn_stop">STOP CAPTURE</string>
     <string name="btn_save_wav">SAVE 10-SEC WAV CLIP</string>
 
-    <string name="label_service_connections">SERVICE CONNECTIONS</string>
-    <string name="label_livekit_gate2">LIVEKIT (GATE2)</string>
-    <string name="label_service_g31">SERVICE G3.1</string>
-    <string name="btn_connect">CONNECT</string>
-    <string name="btn_disconnect">DISCONNECT</string>
-
-    <string name="label_capture_setup">CAPTURE SETUP</string>
-    <string name="btn_gate26_preflight">Preflight Screen Audio Capture (GATE 2.6 Preflight)</string>
+    <string name="label_go_settings">GO BACKEND SETTINGS</string>
+    <string name="label_backend_url">Backend URL:</string>
+    <string name="hint_backend_url">http://192.168.1.X:8080</string>
+    <string name="label_deck_id">Deck ID:</string>
+    <string name="deck_a">Deck A</string>
+    <string name="deck_b">Deck B</string>
+    <string name="label_webrtc_connection">WEBRTC PUBLISHER</string>
+    <string name="btn_connect">CONNECT WEBRTC</string>
+    <string name="btn_disconnect">DISCONNECT WEBRTC</string>
 
     <string name="label_status_log">STATUS LOG</string>
     <string name="btn_copy">Copy</string>
